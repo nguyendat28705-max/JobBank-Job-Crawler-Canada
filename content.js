@@ -5,7 +5,7 @@
 let isCrawling = false;
 let currentPage = 1;
 let allJobs = [];
-let maxPages = 3; // Mặc định 3 trang/lượt
+let maxPages = 0; // 0 = Không giới hạn số trang, quét cho tới khi chạm mốc quá 3 ngày
 let hasExported = false;
 let resumeFromIndex = 0;
 let filterKeywords = [];
@@ -465,7 +465,7 @@ function getBatchProgressText() {
 function updateBatchProgressUI() {
   const el = document.getElementById("jobbank-auto-progress");
   if (el) {
-    el.textContent = `${getBatchProgressText()} | Title/JD chứa keyword | Vancouver/Burnaby/North Vancouver/West Vancouver | 3 ngày | Không lương: giữ lại | Có lương: min 60k/năm (30/h) | Người lấy job: ${crawlerName}`;
+    el.textContent = `${getBatchProgressText()} | Lấy toàn bộ jobs trả về • Lọc bằng Negative Blacklist | Vancouver/Burnaby/North Vancouver/West Vancouver | 3 ngày | Không lương: giữ lại | Có lương: min 60k/năm (30/h) | Người lấy job: ${crawlerName}`;
   }
 }
 
@@ -486,7 +486,7 @@ async function startAutoBatch() {
   const crawlerInput = document.getElementById("crawler-name-input");
   crawlerName = crawlerInput && crawlerInput.value.trim() ? crawlerInput.value.trim() : DEFAULT_CRAWLER_NAME;
 
-  maxPages = 3;
+  maxPages = 0; // 0 = Không giới hạn trang, quét hết tin 3 ngày
 
   filterKeywords = [];
   filterLocations = [...AUTO_ALLOWED_LOCATION_TERMS];
@@ -692,7 +692,7 @@ function createPanel() {
   }
 
   document.getElementById("jobbank-start-btn").onclick = () => {
-    maxPages = 3;
+    maxPages = 0; // 0 = Không giới hạn trang, quét hết tin 3 ngày
     startCrawl();
   };
 
@@ -1583,7 +1583,7 @@ function initialize() {
       rebuildTable();
     }
     if (data.currentPage) currentPage = data.currentPage;
-    maxPages = 3;
+    maxPages = 0; // 0 = Không giới hạn trang, quét hết tin 3 ngày
     if (data.applicantName !== undefined) {
       applicantName = data.applicantName;
       const el = document.getElementById("applicant-name-input");
