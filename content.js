@@ -40,34 +40,17 @@ const DEFAULT_SEARCH_KEYWORDS = [
   "Chief AI officer (Chief Artificial Intelligence Officer)"
 ];
 
-// Bảng ánh xạ kiểm tra STRICT JOB TITLE:
-const AUTO_TITLE_ALIASES = {
-  "analytics": ["analytics"],
-  "artificial_intelligence": ["artificial intelligence", "artificial_intelligence", "AI"],
-  "artificial intelligence": ["artificial intelligence", "artificial_intelligence", "AI"],
-  "data": ["data"],
-  "data scientist": ["data scientist"],
-  "finance": ["finance", "financial"],
-  "financial analyst": ["financial analyst"],
-  "investment": ["investment"],
-  "investment management": ["investment management"],
-  "machine learning": ["machine learning", "ML"],
-  "systems analyst": ["systems analyst", "system analyst"],
-  "technology manager": ["technology manager", "tech manager", "IT manager", "information technology manager"],
+// Bảng đối chiếu chức danh riêng cho 6 vị trí lãnh đạo cấp cao C-Level:
+// (Toàn bộ 11 từ khóa chuyên môn khác đều chấp nhận 100% kết quả từ Job Bank, không lọc title theo keyword)
+const EXECUTIVE_TITLE_TERMS = {
   "President": ["president"],
   "president": ["president"],
   "CEO (Chief Executive Officer)": ["CEO", "Chief Executive Officer"],
-  "CEO Chief Executive Officer": ["CEO", "Chief Executive Officer"],
   "CIO (Chief Information Officer)": ["CIO", "Chief Information Officer"],
-  "CIO Chief Information Officer": ["CIO", "Chief Information Officer"],
   "CTO (Chief Technology Officer)": ["CTO", "Chief Technology Officer"],
-  "CTO Chief Technology Officer": ["CTO", "Chief Technology Officer"],
   "CIO (Chief investment officer)": ["CIO", "Chief Investment Officer"],
-  "CIO Chief Investment Officer": ["CIO", "Chief Investment Officer"],
   "CSO (Chief Science Officer)": ["CSO", "Chief Science Officer", "Chief Scientific Officer"],
-  "CSO Chief Science Officer": ["CSO", "Chief Science Officer", "Chief Scientific Officer"],
-  "Chief AI officer (Chief Artificial Intelligence Officer)": ["Chief AI Officer", "Chief Artificial Intelligence Officer", "CAIO", "Chief AI"],
-  "Chief AI Officer Chief Artificial Intelligence Officer": ["Chief AI Officer", "Chief Artificial Intelligence Officer", "CAIO", "Chief AI"]
+  "Chief AI officer (Chief Artificial Intelligence Officer)": ["Chief AI Officer", "Chief Artificial Intelligence Officer", "CAIO", "Chief AI"]
 };
 
 // 4 khu vực mục tiêu tại Metro Vancouver, BC, Canada kèm Municipal ID (mid) của Job Bank
@@ -313,10 +296,10 @@ function titleContainsTerm(jobTitle, term) {
 function getAutoTitleTerms(searchKeyword) {
   if (!searchKeyword) return [];
   const trimmed = searchKeyword.trim();
-  if (AUTO_TITLE_ALIASES[trimmed]) return AUTO_TITLE_ALIASES[trimmed];
+  if (EXECUTIVE_TITLE_TERMS[trimmed]) return EXECUTIVE_TITLE_TERMS[trimmed];
 
   const lower = trimmed.toLowerCase();
-  for (const [key, aliases] of Object.entries(AUTO_TITLE_ALIASES)) {
+  for (const [key, aliases] of Object.entries(EXECUTIVE_TITLE_TERMS)) {
     if (key.toLowerCase() === lower) return aliases;
   }
 
