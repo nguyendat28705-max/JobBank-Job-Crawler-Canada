@@ -142,19 +142,6 @@ function extractJobKey(url, cardId = "") {
   }
 }
 
-// Kiểm tra chuỗi có chứa giá trị mức lương hay không
-function looksLikeSalary(text) {
-  if (!text) return false;
-  const hasDigit = /\d/.test(text);
-  if (!hasDigit) return false;
-
-  const currencySymbolPattern = /[$€£¥₹₩₫₺₽₴฿]/;
-  const multiCharCurrencyPattern = /\b(RM|R\$|kr|zł|Rp|Rs|CHF|CAD|USD)\b/i;
-  const keywordsPattern = /\b(hourly|annually|monthly|weekly|per hour|per year|per month|salary)\b/i;
-
-  return currencySymbolPattern.test(text) || multiCharCurrencyPattern.test(text) || keywordsPattern.test(text);
-}
-
 // Kiểm tra mức lương theo yêu cầu:
 // 1. Không lương (để trống, N/A, không ghi số cụ thể) -> KHÔNG LOẠI (giữ lại)
 // 2. Có lương -> BẮT BUỘC xét điều kiện >= $60k/năm (hoặc >= $30/h)
@@ -361,44 +348,6 @@ function shouldKeepByAutoTitleKeyword(jobTitle) {
   return terms.some(term => titleContainsTerm(jobTitle, term));
 }
 
-function descriptionContainsTerm(description, term) {
-  if (!description || !term) return false;
-  const desc = description.toLowerCase().replace(/[_–—-]+/g, " ").replace(/\s+/g, " ");
-  const normalizedTerm = term.toLowerCase().replace(/[_–—-]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!normalizedTerm) return false;
-
-  if (/^[a-z0-9]{2,4}$/.test(normalizedTerm)) {
-    const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(desc);
-  }
-  return desc.includes(normalizedTerm);
-}
-
-// Lọc từ khóa: khớp trong Tiêu đề HOẶC trong Mô tả công việc (Job Description)
-function shouldKeepByAutoKeyword(jobTitle, jobDescription = "") {
-  if (!batchRunning) return true;
-  const currentKw = currentSearchKeyword || batchKeywords[batchKeywordIndex] || "";
-  const terms = getAutoTitleTerms(currentKw);
-  if (!terms.length) return false;
-
-  // 1. Kiểm tra Tiêu đề
-  if (jobTitle && terms.some(term => titleContainsTerm(jobTitle, term))) {
-    return true;
-  }
-
-  // 2. Với các vị trí lãnh đạo cấp cao: bắt buộc phải có trong Tiêu đề
-  if (isExecutiveSearchKeyword(currentKw)) {
-    return false;
-  }
-
-  // 3. Với các vị trí chuyên môn: kiểm tra tiếp trong Mô tả công việc
-  if (jobDescription && terms.some(term => descriptionContainsTerm(jobDescription, term))) {
-    return true;
-  }
-
-  return false;
-}
-
 // Xử lý câu truy vấn phù hợp cho Job Bank Canada
 function getSearchQueryForJobBank(keyword) {
   if (!keyword) return "";
@@ -447,13 +396,6 @@ function parseAutoKeywords(text) {
     .filter(line => line.length > 0 && !line.startsWith("#"));
 }
 
-function parseKeywords(text) {
-  if (!text) return [];
-  return text
-    .split(",")
-    .map(k => k.trim())
-    .filter(k => k.length > 0);
-}
 
 function getBatchProgressText() {
   if (!batchRunning || !batchKeywords.length) return "AUTO A→Z chưa chạy";
@@ -626,25 +568,8 @@ function createPanel() {
       <textarea id="auto-keywords-input" rows="5" spellcheck="false">${autoKeywordText}</textarea>
       <div id="jobbank-auto-progress">AUTO A→Z chưa chạy</div>
     </div>
-    <div id="jobbank-crawler-filter">
-      <label>Chỉ giữ jobs có keyword (thủ công, cách nhau bằng dấu phẩy):</label>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <input
-          type="text"
-          id="filter-keywords-input"
-          placeholder="vd: data scientist, analytics, finance, machine learning"
-          value="${filterKeywords.join(', ')}"
-        />
-        <button id="jobbank-filter-btn">Lọc Keyword</button>
-      </div>
-    </div>
-    <div id="jobbank-crawler-location-filter">
-      <label>Chỉ giữ jobs ở khu vực (thủ công, cách nhau bằng dấu phẩy):</label>
-      <div style="display: flex; gap: 6px; align-items: center;">
-        <input type="text" id="filter-locations-input" placeholder="vd: Vancouver, BC, Burnaby, BC" value="${filterLocations.join(', ')}" />
-        <button id="jobbank-location-filter-btn">Lọc Khu Vực</button>
-      </div>
-    </div>
+    
+
     <div id="jobbank-crawler-status">Chưa bắt đầu.</div>
     <div style="padding: 4px 10px; background: #f3e5f5; font-weight: bold; font-size: 11px; color: #4a148c; border-bottom: 1px solid #e1bee7; display: flex; justify-content: space-between; align-items: center;">
       <span>📋 Danh sách Job đạt chuẩn (Dữ liệu chấp nhận)</span>
@@ -742,38 +667,7 @@ function createPanel() {
     exportSheetCSV();
   };
 
-  document.getElementById("jobbank-filter-btn").onclick = () => {
-    const input = document.getElementById("filter-keywords-input").value;
-    filterKeywords = parseKeywords(input);
-    chrome.storage.local.set({ filterKeywords: input });
-    if (filterKeywords.length === 0) {
-      updateStatus("Không có từ khóa lọc.");
-      return;
-    }
-    const before = allJobs.length;
-    allJobs = allJobs.filter(job => shouldKeepByKeyword(job.title));
-    chrome.storage.local.set({ allJobs });
-    rebuildTable();
-    updateStatus(`Đã lọc theo từ khóa: ${filterKeywords.join(", ")}. Còn lại ${allJobs.length} jobs.`);
-    updateButtonStates();
-  };
-
-  document.getElementById("jobbank-location-filter-btn").onclick = () => {
-    const input = document.getElementById("filter-locations-input").value;
-    filterLocations = parseKeywords(input);
-    chrome.storage.local.set({ filterLocations: input });
-    if (filterLocations.length === 0) {
-      updateStatus("Không có khu vực lọc.");
-      return;
-    }
-    const before = allJobs.length;
-    allJobs = allJobs.filter(job => shouldKeepByLocation(job.location));
-    const removed = before - allJobs.length;
-    chrome.storage.local.set({ allJobs });
-    rebuildTable();
-    updateStatus(`Đã loại bỏ ${removed} job(s) ngoài khu vực. Còn lại ${allJobs.length} jobs.`);
-    updateButtonStates();
-  };
+  
 }
 
 function updateButtonStates() {
@@ -867,16 +761,6 @@ async function fetchJobPostingDetail(url) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlText, "text/html");
 
-    // Lấy mô tả công việc
-    const descEls = doc.querySelectorAll('#job-posting-detail, .job-posting-detail-requirements, [property="description"], #jobDetailsSection, .job-posting-detail-body');
-    let description = "";
-    descEls.forEach(el => {
-      description += " " + (el.innerText || "");
-    });
-    if (!description.trim()) {
-      description = doc.body?.innerText || "";
-    }
-
     // Nhận diện phương thức nộp đơn (Apply Method)
     let applyMethod = "Apply Now";
     const externalLink = doc.querySelector("#externalJobLink, a[id*='externalJobLink']");
@@ -922,7 +806,7 @@ async function fetchJobPostingDetail(url) {
       }
     }
 
-    return { description, applyMethod, email, detailSalary, detailTitle };
+    return { applyMethod, email, detailSalary, detailTitle };
   } catch (err) {
     log("Lỗi fetch chi tiết job:", err);
     return null;
