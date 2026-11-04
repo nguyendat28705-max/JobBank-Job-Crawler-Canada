@@ -48,7 +48,8 @@ Crawler tự động duyệt tuần tự qua 18 từ khóa mục tiêu:
 ---
 
 ## 4. Bộ Lọc Mức Lương (Salary Filtering)
-- **Bắt buộc có lương công bố**: Loại bỏ 100% các job không có lương, lương để trống hoặc ghi `N/A`, `to be determined`.
+- **Không lương thì không loại**: Các job không công bố lương, để trống hoặc ghi `N/A`, `to be determined` đều được **giữ lại (không loại)**.
+- **Có lương thì xét điều kiện**: Nếu tin đăng có công bố số tiền cụ thể thì bắt buộc phải đạt chuẩn:
 - **Ngưỡng lương tối thiểu**:
   - Lương năm: Tối thiểu **$60,000 CAD/năm**
   - Lương giờ: Tối thiểu **$30.00 CAD/giờ**

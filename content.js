@@ -155,12 +155,18 @@ function looksLikeSalary(text) {
   return currencySymbolPattern.test(text) || multiCharCurrencyPattern.test(text) || keywordsPattern.test(text);
 }
 
-// Kiểm tra mức lương: BẮT BUỘC CÓ LƯƠNG CÔNG BỐ và đạt >= $60k/năm hoặc >= $30/giờ
+// Kiểm tra mức lương theo yêu cầu:
+// 1. Không lương (để trống, N/A, không ghi số cụ thể) -> KHÔNG LOẠI (giữ lại)
+// 2. Có lương -> BẮT BUỘC xét điều kiện >= $60k/năm (hoặc >= $30/h)
 function salaryMeetsMinimum(salaryText) {
-  if (!salaryText || salaryText === "N/A" || !salaryText.trim()) return false;
-  const values = extractSalaryNumbers(salaryText);
-  if (values.length === 0) return false;
+  // Không có thông tin lương -> Không loại (chấp nhận)
+  if (!salaryText || salaryText === "N/A" || !salaryText.trim()) return true;
 
+  const values = extractSalaryNumbers(salaryText);
+  // Không trích xuất được số tiền cụ thể nào -> Không loại (chấp nhận)
+  if (values.length === 0) return true;
+
+  // Có mức lương công bố cụ thể -> Bắt buộc xét điều kiện >= $60k/năm hoặc >= $30/giờ
   // Lấy giá trị khởi điểm (min) của dải lương để đảm bảo mức tối thiểu đạt chuẩn
   const minSalary = Math.min(...values);
   const period = getSalaryPeriod(salaryText);
@@ -175,6 +181,7 @@ function salaryMeetsMinimum(salaryText) {
   // Trường hợp mức theo giờ phổ biến
   if (minSalary >= AUTO_MIN_HOURLY_SALARY && minSalary <= 200) return true;
 
+  // Mức lương công bố dưới ngưỡng tối thiểu -> Loại bỏ
   return false;
 }
 
@@ -458,7 +465,7 @@ function getBatchProgressText() {
 function updateBatchProgressUI() {
   const el = document.getElementById("jobbank-auto-progress");
   if (el) {
-    el.textContent = `${getBatchProgressText()} | Title/JD chứa keyword | Vancouver/Burnaby/North Vancouver/West Vancouver | 3 ngày | Lương bắt buộc min 60k/năm (30/h) | Người lấy job: ${crawlerName}`;
+    el.textContent = `${getBatchProgressText()} | Title/JD chứa keyword | Vancouver/Burnaby/North Vancouver/West Vancouver | 3 ngày | Không lương: giữ lại | Có lương: min 60k/năm (30/h) | Người lấy job: ${crawlerName}`;
   }
 }
 
@@ -607,7 +614,7 @@ function createPanel() {
     </div>
     <div id="jobbank-auto-config">
       <div class="auto-title">
-        🍁 Job Bank Canada AUTO A→Z: Vancouver, Burnaby, North/West Vancouver • 3 ngày • Lương bắt buộc min $60k/năm ($30/h)
+        🍁 Job Bank Canada AUTO A→Z: Vancouver, Burnaby, North/West Vancouver • 3 ngày • Không lương: giữ lại | Có lương: min $60k/năm ($30/h)
       </div>
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
         <label><strong>Người nộp:</strong></label>
@@ -1098,9 +1105,9 @@ async function crawlPage(startIndex = 0) {
         await wait(200);
       }
 
-      // 9. Bộ lọc mức lương: BẮT BUỘC PHẢI CÓ LƯƠNG CÔNG BỐ VÀ đạt >= $60k/năm ($30/h). LOẠI BỎ HOÀN TOÀN N/A
+      // 9. Bộ lọc mức lương: Không lương thì không loại, có lương thì xét điều kiện >= $60k/năm (hoặc >= $30/h)
       if (!salaryMeetsMinimum(effectiveSalary)) {
-        log(`Bỏ qua (không có lương công bố hoặc dưới chuẩn $60k/năm - $30/h): "${pendingJob.title}" - ${effectiveSalary}`);
+        log(`Bỏ qua (mức lương công bố dưới chuẩn $60k/năm - $30/h): "${pendingJob.title}" - ${effectiveSalary}`);
         continue;
       }
 
