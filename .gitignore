@@ -1,0 +1,12 @@
+# System & IDE files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Archives & Temporary files
+*.zip
+*.tar.gz
+*.tmp
+node_modules/

@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Job Bank Job Crawler AUTO A-Z - Vancouver Area",
+  "version": "4.1.0",
+  "description": "AUTO A-Z: Job Bank Canada (jobbank.gc.ca) - Vancouver/Burnaby/North Vancouver/West Vancouver, 3 ngày, strict title, salary >=60k/năm hoặc >=30/h (bắt buộc công bố lương), Apply Now/Company Site/Email, Người lấy job: Nguyễn Tiến Đạt.",
+  "permissions": [
+    "scripting",
+    "tabs",
+    "downloads",
+    "storage"
+  ],
+  "action": {
+    "default_title": "Job Bank Job Crawler",
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "https://*.jobbank.gc.ca/*",
+    "https://jobbank.gc.ca/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.jobbank.gc.ca/*",
+        "https://jobbank.gc.ca/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "styles.css"
+      ]
+    }
+  ]
+}
