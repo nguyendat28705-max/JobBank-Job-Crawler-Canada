@@ -1181,63 +1181,36 @@ function classifySalary(salaryText) {
   return "";
 }
 
+// Phân loại cấp bậc công việc (Column L) gộp theo đúng 3 nhóm chuẩn:
+// 1. "Chief/President level"
+// 2. "Manager"
+// 3. "Dưới Manager"
 function classifyJobLevel(jobTitle) {
-  if (!jobTitle || jobTitle === "N/A") return "";
+  if (!jobTitle || jobTitle === "N/A") return "Dưới Manager";
   const text = jobTitle.toLowerCase().replace(/[_–—-]+/g, " ").replace(/\s+/g, " ").trim();
 
-  // 1. C-Level (Chức danh cấp C và President)
-  if (
-    /\b(chief executive officer|chief information officer|chief technology officer|chief data officer|chief financial officer|chief security officer|chief operating officer|chief science officer|chief ai officer)\b/.test(text) ||
-    /\b(ceo|cio|cto|cdo|cfo|cso|coo|caio|c-level)\b/.test(text) ||
-    (/\bpresident\b/.test(text) && !/\b(vice|vp)\b/.test(text))
-  ) {
-    return "C-Level";
+  // 1. Vice President / VP thuộc nhóm Manager (không phải Chief/President level)
+  if (/\bvice[\s-]+president\b/i.test(text) || /\bvp\b/i.test(text)) {
+    return "Manager";
   }
 
-  // 2. Executive (VP, Vice President, EVP, SVP, Executive)
+  // 2. Chief/President level: Các chức danh cấp C và President
   if (
-    /\b(executive|vp|vice president|evp|svp)\b/.test(text)
+    /\b(chief|ceo|cio|cto|cso|caio|coo|cfo|cdo|cmo|cro|c-level)\b/i.test(text) ||
+    (/\bpresident\b/i.test(text) && !/\b(vice|vp|assistant)\b/i.test(text))
   ) {
-    return "Executive";
+    return "Chief/President level";
   }
 
-  // 3. Director (Director, Directeur, Head of)
+  // 3. Manager (bao gồm Director, Directeur, Head of, Manager, Gestionnaire, Supervisor, Lead, Dean, Principal...)
   if (
-    /\b(director|directeur|head of)\b/.test(text)
-  ) {
-    return "Director";
-  }
-
-  // 4. Manager (Manager, Gestionnaire, Supervisor)
-  if (
-    /\b(manager|gestionnaire|supervisor)\b/.test(text)
+    /\b(director|directeur|head of|manager|gestionnaire|supervisor|lead|dean|principal)\b/i.test(text)
   ) {
     return "Manager";
   }
 
-  // 5. Senior (Senior, Sr., Principal, Staff, Lead, Expert)
-  if (
-    /\b(senior|sr\.?|principal|staff|lead|team lead|tech lead|expert)\b/.test(text)
-  ) {
-    return "Senior";
-  }
-
-  // 6. Intern (Intern, Internship, Co-op, Coop, Trainee, Student)
-  if (
-    /\b(intern|internship|trainee|practicum|co-op|coop|student|stagiaire)\b/.test(text)
-  ) {
-    return "Intern";
-  }
-
-  // 7. Junior (Junior, Jr., Fresher, Graduate, Entry Level, Associate)
-  if (
-    /\b(fresher|graduate|entry level|junior|jr\.?|associate)\b/.test(text)
-  ) {
-    return "Junior";
-  }
-
-  // 8. Middle (Mặc định cho các chức danh trung cấp)
-  return "Middle";
+  // 4. Còn lại thuộc Dưới Manager (Senior, Middle, Junior, Intern, Specialist, Analyst, Developer, Associate...)
+  return "Dưới Manager";
 }
 
 function formatSheetDate() {

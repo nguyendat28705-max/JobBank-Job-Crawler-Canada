@@ -80,7 +80,7 @@ File CSV xuất ra mã hóa **UTF-8 with BOM** (`\uFEFF`), sẵn sàng mở và 
 | **I** | `Jobboard` | `"Job Bank"` |
 | **J** | `Date` | Ngày xuất file định dạng **`MM/DD/YYYY`** |
 | **K** | `Status` | Cột trống (`""`) |
-| **L** | `Phân loại job` | Cấp bậc: `Intern`, `Junior`, `Middle`, `Senior`, `Manager`, `Director`, `Executive`, `C-Level` |
+| **L** | `Phân loại job` | Cấp bậc chuẩn 3 nhóm: `Chief/President level`, `Manager`, `Dưới Manager` |
 | **M** | `Người nộp` | **BẮT BUỘC ĐỂ TRỐNG** (`""`) |
 | **N** | `Người lấy job` | `"Nguyễn Tiến Đạt"` |
 | **O** | `Email nộp job trực tiếp` | Để trống (`""`) |
