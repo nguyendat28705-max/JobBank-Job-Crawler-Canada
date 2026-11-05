@@ -78,7 +78,7 @@ File CSV xuất ra mã hóa **UTF-8 with BOM** (`\uFEFF`), sẵn sàng mở và 
 | **G** | `Salary` | Mức lương chuẩn hóa có số tiền cụ thể |
 | **H** | `Location` | Địa điểm (Vancouver, BC / Burnaby, BC / North Vancouver, BC / West Vancouver, BC / Remote) |
 | **I** | `Jobboard` | `"Job Bank"` |
-| **J** | `Date` | Ngày xuất file định dạng **`MM/DD/YYYY`** |
+| **J** | `Date` | Ngày xuất file định dạng **`DD/MM/YYYY (Ngày/Tháng/Năm, ví dụ 05/11/2026)`** |
 | **K** | `Status` | Cột trống (`""`) |
 | **L** | `Phân loại job` | Cấp bậc chuẩn 3 nhóm: `Chief/President level`, `Manager`, `Dưới Manager` |
 | **M** | `Người nộp` | **BẮT BUỘC ĐỂ TRỐNG** (`""`) |

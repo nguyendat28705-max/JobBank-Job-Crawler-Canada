@@ -1213,12 +1213,13 @@ function classifyJobLevel(jobTitle) {
   return "Dưới Manager";
 }
 
+// Định dạng ngày DD/MM/YYYY chuẩn (Ngày/Tháng/Năm, ví dụ: 05/11/2026)
 function formatSheetDate() {
   const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = now.getFullYear();
-  return `${month}/${day}/${year}`;
+  return `${day}/${month}/${year}`;
 }
 
 function formattedCompanyTitle(company, title) {
