@@ -8,6 +8,7 @@ let allJobs = [];
 let maxPages = 0; // 0 = Không giới hạn số trang, quét cho tới khi chạm mốc quá 3 ngày
 let hasExported = false;
 let resumeFromIndex = 0;
+let consecutiveNetworkErrors = 0;
 let filterKeywords = [];
 let filterLocations = [];
 
@@ -473,7 +474,7 @@ async function finishCurrentKeyword(reason = "") {
     });
     updateBatchProgressUI();
     updateStatus(`Hoàn tất "${finishedKeyword}" tại vị trí trước (${reason}). Chuyển sang: ${currentSearchLocation.name}`);
-    await wait(1200);
+    await wait(2500 + Math.floor(Math.random() * 1000));
     location.href = buildJobBankSearchUrl(currentSearchKeyword, currentSearchLocation);
     return false;
   }
@@ -494,7 +495,7 @@ async function finishCurrentKeyword(reason = "") {
     });
     updateBatchProgressUI();
     updateStatus(`Hoàn tất keyword "${finishedKeyword}" (${reason}). Chuyển sang: "${currentSearchKeyword}" @ ${currentSearchLocation.name}`);
-    await wait(1200);
+    await wait(2500 + Math.floor(Math.random() * 1000));
     location.href = buildJobBankSearchUrl(currentSearchKeyword, currentSearchLocation);
     return false;
   }
@@ -734,64 +735,97 @@ async function waitForJobCards(timeout = 15000) {
   });
 }
 
-// Tải chi tiết tin tuyển dụng ngầm qua fetch để đọc JD, Email và Apply Method
+function parsePostingDetailHtml(htmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, "text/html");
+
+  // Nhận diện phương thức nộp đơn (Apply Method)
+  let applyMethod = "Apply Now";
+  const externalLink = doc.querySelector("#externalJobLink, a[id*='externalJobLink']");
+  if (externalLink) {
+    applyMethod = "Apply on Company Site";
+  } else {
+    const applyBtn = doc.querySelector("#applynowbutton, button[id*='applynow']");
+    if (applyBtn) {
+      applyMethod = "Apply Now";
+    }
+  }
+
+  // Trích xuất email HR trực tiếp nếu có
+  let email = "";
+  const mailtoLink = doc.querySelector("a[href^='mailto:']");
+  if (mailtoLink) {
+    email = mailtoLink.href.replace(/^mailto:/i, "").split("?")[0].trim();
+  } else {
+    const emailMatch = htmlText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+    if (emailMatch) {
+      // Loại trừ các email hệ thống của chính Job Bank
+      const found = emailMatch[1].toLowerCase();
+      if (!found.includes("jobbank.gc.ca") && !found.includes("canada.ca")) {
+        email = emailMatch[1].trim();
+      }
+    }
+  }
+
+  // Lấy mức lương chi tiết hơn nếu card chưa có
+  let detailSalary = "";
+  const salaryEl = doc.querySelector('[property="baseSalary"], .salary, .attribute-value.salary');
+  if (salaryEl) {
+    detailSalary = salaryEl.innerText?.trim() || "";
+  }
+
+  // Lấy chức danh công việc sạch từ trang chi tiết nếu có
+  let detailTitle = "";
+  const titleH1 = doc.querySelector("h1[property='title'], h1.title, #job-posting-detail h1, h1");
+  if (titleH1) {
+    const t = titleH1.innerText?.trim().replace(/[\r\n]+/g, " ").replace(/\s+/g, " ") || "";
+    if (t) {
+      detailTitle = t.charAt(0).toUpperCase() + t.slice(1);
+    }
+  }
+
+  return { applyMethod, email, detailSalary, detailTitle };
+}
+
+// Tải chi tiết tin tuyển dụng ngầm qua fetch với cơ chế chống chặn WAF F5 Big-IP
 async function fetchJobPostingDetail(url) {
   if (!url) return null;
   try {
     const resp = await fetch(url, { credentials: "same-origin" });
+
+    // Cơ chế tự động hạ nhiệt khi gặp HTTP 429 (Too Many Requests) hoặc 503
+    if (resp.status === 429 || resp.status === 503) {
+      updateStatus("⚠️ Máy chủ Job Bank yêu cầu giảm tốc độ (429/503). Tạm dừng 15s để hạ nhiệt...");
+      log("Máy chủ phản hồi 429/503. Tạm nghỉ 15 giây...");
+      await wait(15000);
+      try {
+        const retryResp = await fetch(url, { credentials: "same-origin" });
+        if (!retryResp.ok) return null;
+        consecutiveNetworkErrors = 0;
+        return parsePostingDetailHtml(await retryResp.text());
+      } catch (retryErr) {
+        log("Thử lại sau 429 thất bại:", retryErr);
+        return null;
+      }
+    }
+
     if (!resp.ok) return null;
+    consecutiveNetworkErrors = 0;
     const htmlText = await resp.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, "text/html");
-
-    // Nhận diện phương thức nộp đơn (Apply Method)
-    let applyMethod = "Apply Now";
-    const externalLink = doc.querySelector("#externalJobLink, a[id*='externalJobLink']");
-    if (externalLink) {
-      applyMethod = "Apply on Company Site";
-    } else {
-      const applyBtn = doc.querySelector("#applynowbutton, button[id*='applynow']");
-      if (applyBtn) {
-        applyMethod = "Apply Now";
-      }
-    }
-
-    // Trích xuất email HR trực tiếp nếu có
-    let email = "";
-    const mailtoLink = doc.querySelector("a[href^='mailto:']");
-    if (mailtoLink) {
-      email = mailtoLink.href.replace(/^mailto:/i, "").split("?")[0].trim();
-    } else {
-      const emailMatch = htmlText.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-      if (emailMatch) {
-        // Loại trừ các email hệ thống của chính Job Bank
-        const found = emailMatch[1].toLowerCase();
-        if (!found.includes("jobbank.gc.ca") && !found.includes("canada.ca")) {
-          email = emailMatch[1].trim();
-        }
-      }
-    }
-
-    // Lấy mức lương chi tiết hơn nếu card chưa có
-    let detailSalary = "";
-    const salaryEl = doc.querySelector('[property="baseSalary"], .salary, .attribute-value.salary');
-    if (salaryEl) {
-      detailSalary = salaryEl.innerText?.trim() || "";
-    }
-
-    // Lấy chức danh công việc sạch từ trang chi tiết nếu có
-    let detailTitle = "";
-    const titleH1 = doc.querySelector("h1[property='title'], h1.title, #job-posting-detail h1, h1");
-    if (titleH1) {
-      const t = titleH1.innerText?.trim().replace(/[\r\n]+/g, " ").replace(/\s+/g, " ") || "";
-      if (t) {
-        detailTitle = t.charAt(0).toUpperCase() + t.slice(1);
-      }
-    }
-
-    return { applyMethod, email, detailSalary, detailTitle };
+    return parsePostingDetailHtml(htmlText);
   } catch (err) {
-    log("Lỗi fetch chi tiết job:", err);
+    consecutiveNetworkErrors++;
+    log(`Lỗi kết nối khi fetch (${consecutiveNetworkErrors}/3):`, err);
+
+    // Circuit Breaker: nếu bị ngắt kết nối liên tiếp 3 lần (ERR_CONNECTION_RESET), tự động dừng để bảo vệ IP
+    if (consecutiveNetworkErrors >= 3) {
+      updateStatus("⛔ Tường lửa máy chủ đã ngắt kết nối (ERR_CONNECTION_RESET). Tự động DỪNG để bảo vệ IP!");
+      isCrawling = false;
+      batchRunning = false;
+      await chrome.storage.local.set({ isCrawling: false, batchRunning: false });
+      updateButtonStates();
+      updateBatchProgressUI();
+    }
     return null;
   }
 }
@@ -969,7 +1003,15 @@ async function crawlPage(startIndex = 0) {
             effectiveSalary = details.detailSalary;
           }
         }
-        await wait(200);
+
+        // Nếu ngắt kết nối liên tiếp dẫn đến circuit breaker dừng crawl
+        if (!isCrawling) {
+          return false;
+        }
+
+        // Độ trễ an toàn ngẫu nhiên giữa các lần đọc chi tiết: 1200ms - 2000ms (Human-like pacing)
+        const safeDelay = 1200 + Math.floor(Math.random() * 800);
+        await wait(safeDelay);
       }
 
       // 9. Bộ lọc mức lương: Không lương thì không loại, có lương thì xét điều kiện >= $60k/năm (hoặc >= $30/h)
@@ -1038,6 +1080,8 @@ async function crawlPage(startIndex = 0) {
       if (newCardsLoaded) {
         currentPage++;
         await chrome.storage.local.set({ currentPage });
+        // Khoảng nghỉ nhẹ nhàng trước khi đọc trang mới để tránh dồn stream
+        await wait(1500 + Math.floor(Math.random() * 1000));
         return await crawlPage(currentCardsCount);
       }
     }
